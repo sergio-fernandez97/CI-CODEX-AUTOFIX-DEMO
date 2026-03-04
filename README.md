@@ -111,7 +111,7 @@ git commit -m "fix: make tests pass"
 git push -u origin demo/break-ci
 ```
 
-#### 4. Self-healing CI in GitHub Actions
+### 4. Self-healing CI in GitHub Actions
 Now we’ll let the pipeline auto-fix itself without local interaction.
 
 1. Create a new failing commit (again)
@@ -149,3 +149,261 @@ Typical rubric:
 You should see a comment like:
 * Score: 10/10
 * plus details (tests exit code, changed files, line count)
+
+## Challenge — Build Your Own Self-Healing CI Repo
+### Objective
+Each student must create a tiny repo from scratch (any programming language) that includes:
+1. source code (2–4 small functions)
+2. tests (that can fail)
+3. CI workflow that runs tests on PRs
+4. Codex Auto-fix workflow that can fix failing tests and push a patch
+5. Grading workflow that scores the PR automatically
+
+You should experience the full GitHub Actions setup end-to-end.
+
+### Deliverables (what you must submit)
+Your repo must contain:
+- `README.md` with:
+  - how to run tests locally
+  - how to run CI
+  - how to run Auto-fix workflow
+  - how grading works
+- A working CI workflow: `.github/workflows/ci.yml`
+- A working auto-fix workflow: `.github/workflows/codex-autofix.yml`
+- A grading workflow: `.github/workflows/grade.yml`
+- A Codex prompt file used by the auto-fix workflow: `.codex/prompts/fix-ci.prompt.md`
+
+### Step-by-Step Instructions
+
+#### 1. Create a new repo
+Create a new GitHub repository (public or private).
+
+Clone it locally:
+```bash
+git clone <repo-url>
+cd <repo-name>
+```
+
+#### 2. Pick your language + minimal project skeleton
+Choose one language and create the smallest possible structure.
+
+Examples:
+- Python: `src/`, `tests/`, `pyproject.toml` (uv recommended)
+- Node/TypeScript: `src/`, `test/`, `package.json`
+- Go: `*.go`, `_test.go`
+- Java: Maven/Gradle minimal project
+- Rust: `src/lib.rs`, `tests/`
+
+Rule: keep it tiny. 2-4 functions only.
+
+#### 3. Write your own functions
+Create a module/library with 2-4 functions.
+
+Good examples:
+- string utilities
+- math helpers
+- parsing helpers
+- date formatting helpers
+
+Important: make at least one function easy to break (so tests can fail).
+
+#### 4. Write tests
+Write tests that validate your functions.
+
+Requirements:
+- tests must run in one command (e.g. `pytest`, `npm test`, `go test ./...`)
+- tests should be deterministic
+
+#### 5. Verify locally: tests pass first
+Before adding CI, confirm everything is green locally.
+
+Example commands:
+- Python: `uv run pytest -q`
+- Node: `npm test`
+- Go: `go test ./...`
+
+#### 6. Add CI workflow (GitHub Actions)
+Create `.github/workflows/ci.yml`.
+
+This workflow must run on:
+- `pull_request`
+- push to `main`
+
+It must:
+- checkout code
+- setup language runtime
+- install dependencies
+- run tests
+
+What you MUST modify in `ci.yml`:
+- change the install + test commands to match your language
+
+Replace these lines (example from Python):
+```yaml
+- run: uv sync
+- run: uv run pytest -q
+```
+
+With your language equivalent, for example:
+
+Node:
+```yaml
+- run: npm ci
+- run: npm test
+```
+
+Go:
+```yaml
+- run: go test ./...
+```
+
+#### 7. Add Codex Auto-fix workflow
+Create `.github/workflows/codex-autofix.yml`.
+
+This workflow will be triggered manually with `workflow_dispatch` and takes one input:
+- `branch` (the branch to fix)
+
+It must:
+- checkout that branch
+- run tests (capture logs)
+- run Codex non-interactively (recommended: `openai/codex-action@v1`)
+- re-run tests
+- commit and push changes
+
+What you MUST modify in `codex-autofix.yml`:
+- test command (twice):
+  - the `Run tests (capture logs)` step
+  - the `Re-run tests (must be green)` step
+
+Example (Python):
+```bash
+uv run pytest -q 2>&1 | tee pytest.log
+uv run pytest -q
+```
+
+Replace with your test command:
+
+Node:
+```bash
+npm test 2>&1 | tee test.log
+npm test
+```
+
+Go:
+```bash
+go test ./... 2>&1 | tee test.log
+go test ./...
+```
+
+Prompt file path (if you name it differently):
+```yaml
+prompt-file: .codex/commands/fix-ci.md
+```
+
+#### 8. Add a Codex prompt file (required)
+Create:
+```text
+.codex/commands/fix-ci..md
+```
+
+Update it to match your language + test command.
+
+Template:
+```text
+You are fixing a CI failure in this repository.
+
+Goal: make the test suite pass.
+
+Rules:
+- Do NOT weaken or delete tests.
+- Prefer minimal diff.
+- Fix the root cause in source code.
+- After changes, run the tests and ensure they pass.
+
+Test command:
+<PUT YOUR TEST COMMAND HERE>
+
+Start by running the tests and inspecting the failure output.
+```
+
+What you MUST modify here:
+- the test command
+- any language-specific constraints (e.g., "don't change package.json scripts")
+
+#### 9. Add grading workflow
+Create `.github/workflows/grade.yml`.
+
+The grader must:
+- run tests on PRs
+- apply quality gates
+- comment a score on the PR
+
+What you MUST modify in `grade.yml`:
+- test command
+- optional quality gates paths
+- if your tests folder is not `tests/`, adjust it
+- if your source folder is not `src/`, adjust it
+
+Example (Python):
+```bash
+uv run pytest -q
+if echo "$CHANGED" | grep -q "tests/"; then ...
+```
+
+Replace with:
+- Node: `npm test`
+- Go: `go test ./...`
+
+And update folder checks if needed.
+
+### How to Complete the Challenge (Student Flow)
+
+#### A. Push initial version (green)
+Commit everything (code, tests, workflows):
+```bash
+git add -A
+git commit -m "init: add code, tests, CI, autofix, grading"
+git push -u origin main
+```
+
+Confirm CI is green on `main`.
+
+#### B. Create a failing PR
+Create branch:
+```bash
+git checkout -b challenge/break-ci
+```
+
+Break one function (source code only).
+
+Commit + push:
+```bash
+git add -A
+git commit -m "break: introduce failing tests"
+git push -u origin challenge/break-ci
+```
+
+Open a PR to `main` and confirm CI fails.
+
+#### C. Run auto-fix workflow
+GitHub -> Actions -> Codex Auto-fix
+
+Run workflow with input:
+```text
+branch = challenge/break-ci
+```
+
+Confirm:
+- a new commit is pushed to your branch
+- CI turns green
+
+#### D. Check grade
+The Grade workflow will comment a score in the PR.
+
+### Success Criteria (Pass/Fail)
+You pass if your repo demonstrates all of these:
+- CI runs on PR and can fail
+- Auto-fix workflow runs and pushes a patch
+- CI becomes green after auto-fix
+- Grade workflow comments a score
+- Tests were not weakened/deleted
