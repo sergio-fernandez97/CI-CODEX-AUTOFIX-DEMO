@@ -407,3 +407,9 @@ You pass if your repo demonstrates all of these:
 - CI becomes green after auto-fix
 - Grade workflow comments a score
 - Tests were not weakened/deleted
+
+### Bonus (optional)
+* Add a “PR summary” comment step after auto-fix: after the auto-fix workflow commits the patch, the workflow adds a comment to the Pull Request summarizing what the AI changed.
+
+### Lecture
+[How AI assistance impacts the formation of coding skills](https://www.anthropic.com/research/AI-assistance-coding-skills)
