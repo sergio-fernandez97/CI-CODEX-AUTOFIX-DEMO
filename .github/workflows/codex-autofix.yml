@@ -8,6 +8,7 @@ on:
         required: true
 
 permissions:
+  # If you’re committing back to branches, your workflow needs write permissions:
   contents: write
   pull-requests: write
 
