@@ -1,0 +1,61 @@
+name: Codex Auto-fix
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "Branch to fix (e.g., feature/break-ci)"
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  autofix:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout target branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.branch }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Run tests (capture logs)
+        run: |
+          set +e
+          uv run pytest -q 2>&1 | tee pytest.log
+          exit 0
+
+      - name: Install Node (for Codex CLI)
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install Codex CLI
+        run: |
+          # Replace with your preferred install method if different
+          npm install -g @openai/codex
+
+      - name: Run Codex autofix command
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          # Ensure codex sees the .codex folder at repo root
+          codex /fix-ci
+
+      - name: Re-run tests (must be green)
+        run: uv run pytest -q
+
+      - name: Commit & push changes
+        run: |
+          git config user.name "codex-autofix-bot"
+          git config user.email "codex-autofix-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "autofix: make CI green" || exit 0
+          git push

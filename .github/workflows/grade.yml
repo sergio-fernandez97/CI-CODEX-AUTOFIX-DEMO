@@ -1,0 +1,76 @@
+name: Grade
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  grade:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v1
+
+      - name: Install deps
+        run: uv sync
+
+      - name: Public tests
+        id: public
+        run: |
+          set +e
+          uv run pytest -q
+          echo "code=$?" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Quality gates (no test changes, small diff)
+        id: gates
+        run: |
+          set +e
+          git fetch origin ${{ github.base_ref }} --depth=1
+
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | tr '\n' ' ')
+          echo "changed=$CHANGED" >> $GITHUB_OUTPUT
+
+          if echo "$CHANGED" | grep -q "tests/"; then
+            echo "tests_changed=1" >> $GITHUB_OUTPUT
+          else
+            echo "tests_changed=0" >> $GITHUB_OUTPUT
+          fi
+
+          # Count changed lines (rough gate)
+          LINES=$(git diff --shortstat origin/${{ github.base_ref }}...HEAD | awk '{print $4}')
+          if [ -z "$LINES" ]; then LINES=0; fi
+          echo "lines=$LINES" >> $GITHUB_OUTPUT
+          exit 0
+
+      - name: Compute score + comment
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          SCORE=0
+
+          # 6 pts: tests pass
+          if [ "${{ steps.public.outputs.code }}" = "0" ]; then SCORE=$((SCORE+6)); fi
+
+          # 2 pts: tests unchanged
+          if [ "${{ steps.gates.outputs.tests_changed }}" = "0" ]; then SCORE=$((SCORE+2)); fi
+
+          # 2 pts: small diff (<= 80 changed lines)
+          L="${{ steps.gates.outputs.lines }}"
+          if [ "$L" -le 80 ]; then SCORE=$((SCORE+2)); fi
+
+          BODY="""### ✅ Auto-grade result
+                Score: **$SCORE / 10**
+
+            - Public tests exit code: **${{ steps.public.outputs.code }}** (0 = pass)
+            - Tests folder modified: **${{ steps.gates.outputs.tests_changed }}** (0 = no)
+            - Approx. lines changed: **$L**
+            - Changed files: ${{ steps.gates.outputs.changed }}
+            """
+
+          gh pr comment ${{ github.event.pull_request.number }} --body "$BODY"
