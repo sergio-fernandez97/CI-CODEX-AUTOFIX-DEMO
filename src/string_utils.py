@@ -16,7 +16,7 @@ def count_vowels(s: str) -> int:
         if char in vowels:
             count += 1
 
-    return count + 2
+    return count
 
 
 def is_palindrome(s: str) -> bool:
