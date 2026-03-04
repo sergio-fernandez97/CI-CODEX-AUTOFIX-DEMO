@@ -1,0 +1,9 @@
+[project]
+name = "ci-codex-autofix-demo"
+version = "0.1.0"
+description = "Tiny repo for Codex CI self-healing demo"
+requires-python = ">=3.11"
+
+dependencies = [
+    "pytest>=8.0.0"
+]
