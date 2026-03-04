@@ -48,7 +48,7 @@ jobs:
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: |
           # Ensure codex sees the .codex folder at repo root
-          codex /fix-ci
+          codex /fix-tests
 
       - name: Re-run tests (must be green)
         run: uv run pytest -q
