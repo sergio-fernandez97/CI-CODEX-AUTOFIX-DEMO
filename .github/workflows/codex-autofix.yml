@@ -43,12 +43,14 @@ jobs:
           # Replace with your preferred install method if different
           npm install -g @openai/codex
 
-      - name: Run Codex autofix command
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-        run: |
-          # Ensure codex sees the .codex folder at repo root
-          codex "Fix failing CI tests, minimal diff, don’t modify tests."
+      - name: Run Codex (non-interactive)
+        id: run_codex
+        uses: openai/codex-action@v1
+        with:
+          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
+          prompt-file: .codex/commands/fix-tests.md
+          # optional: keep Codex in a safe sandbox with write access to workspace
+          sandbox: workspace-write
 
       - name: Re-run tests (must be green)
         run: uv run pytest -q
