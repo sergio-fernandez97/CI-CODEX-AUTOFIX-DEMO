@@ -1,4 +1,0 @@
-interface:
-  display_name: "Fix CI Failure"
-  short_description: "Minimal app-code fixes so uv run pytest passes in CI."
-  default_prompt: "Fix failing CI tests with a minimal production-code diff, avoid modifying tests, use pytest.log when present, and ensure uv run pytest passes with a short summary."
