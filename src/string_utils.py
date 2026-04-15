@@ -23,4 +23,4 @@ def is_palindrome(s: str) -> bool:
     """
     Check if string is palindrome.
     """
-    return s == reverse_string(s)
+    return s == s[::-1]
