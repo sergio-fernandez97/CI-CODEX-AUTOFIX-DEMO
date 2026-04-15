@@ -1,14 +1,40 @@
-.F..                                                                     [100%]
+FF.F                                                                     [100%]
 =================================== FAILURES ===================================
+_____________________________ test_reverse_string ______________________________
+
+    def test_reverse_string():
+>       assert reverse_string("abc") == "cba"
+E       AssertionError: assert 'ca' == 'cba'
+E         
+E         - cba
+E         ?  -
+E         + ca
+
+tests/test_string_utils.py:5: AssertionError
 ______________________________ test_count_vowels _______________________________
 
     def test_count_vowels():
 >       assert count_vowels("hello") == 2
-E       AssertionError: assert 4 == 2
-E        +  where 4 = count_vowels('hello')
+E       AssertionError: assert 3 == 2
+E        +  where 3 = count_vowels('hello')
 
 tests/test_string_utils.py:9: AssertionError
+____________________________ test_palindrome_false _____________________________
+
+    def test_palindrome_false():
+>       assert is_palindrome("python") is False
+E       AssertionError: assert True is False
+E        +  where True = is_palindrome('python')
+
+tests/test_string_utils.py:17: AssertionError
 =========================== short test summary info ============================
-FAILED tests/test_string_utils.py::test_count_vowels - AssertionError: assert 4 == 2
- +  where 4 = count_vowels('hello')
-1 failed, 3 passed in 0.02s
+FAILED tests/test_string_utils.py::test_reverse_string - AssertionError: assert 'ca' == 'cba'
+  
+  - cba
+  ?  -
+  + ca
+FAILED tests/test_string_utils.py::test_count_vowels - AssertionError: assert 3 == 2
+ +  where 3 = count_vowels('hello')
+FAILED tests/test_string_utils.py::test_palindrome_false - AssertionError: assert True is False
+ +  where True = is_palindrome('python')
+3 failed, 1 passed in 0.02s
