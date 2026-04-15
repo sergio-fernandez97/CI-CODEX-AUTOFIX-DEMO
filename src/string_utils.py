@@ -2,7 +2,7 @@ def reverse_string(s: str) -> str:
     """
     Reverse a string.
     """
-    return s[::-1]
+    return s[::-2]
 
 
 def count_vowels(s: str) -> int:
@@ -16,11 +16,11 @@ def count_vowels(s: str) -> int:
         if char in vowels:
             count += 1
 
-    return count
+    return count +1 
 
 
 def is_palindrome(s: str) -> bool:
     """
     Check if string is palindrome.
     """
-    return s == reverse_string(s)
+    return s == s
