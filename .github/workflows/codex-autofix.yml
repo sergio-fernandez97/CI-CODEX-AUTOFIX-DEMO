@@ -4,11 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       branch:
-        description: "Branch to fix (e.g., feature/break-ci)"
+        description: "Branch to fix (e.g., demo/break-ci)"
         required: true
 
 permissions:
-  # If you’re committing back to branches, your workflow needs write permissions:
   contents: write
   pull-requests: write
 
@@ -20,45 +19,60 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ inputs.branch }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v1
+        uses: astral-sh/setup-uv@v5
 
       - name: Install deps
         run: uv sync
 
-      - name: Run tests (capture logs)
+      - name: Run tests and capture failures
+        id: run_tests
         run: |
           set +e
           uv run pytest -q 2>&1 | tee pytest.log
+          EXIT_CODE=$?
+          echo "exit_code=$EXIT_CODE" >> $GITHUB_OUTPUT
+
+      - name: Skip if tests already pass
+        if: steps.run_tests.outputs.exit_code == '0'
+        run: |
+          echo "✅ All tests already pass — nothing to fix."
           exit 0
 
-      - name: Install Node (for Codex CLI)
+      - name: Install Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
 
       - name: Install Codex CLI
-        run: |
-          # Replace with your preferred install method if different
-          npm install -g @openai/codex
+        run: npm install -g @openai/codex
 
-      - name: Run Codex (non-interactive)
-        id: run_codex
-        uses: openai/codex-action@v1
-        with:
-          openai-api-key: ${{ secrets.OPENAI_API_KEY }}
-          prompt-file: .codex/commands/fix-tests.md
-          # optional: keep Codex in a safe sandbox with write access to workspace
-          sandbox: workspace-write
+      - name: Run Codex auto-fix
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+        run: |
+          PROMPT=$(cat .codex/commands/fix-tests.md)
+          TEST_FAILURES=$(cat pytest.log)
+          codex --approval-mode full-auto \
+            --model o4-mini \
+            "$PROMPT
+
+          ## Current Test Failures
+          \`\`\`
+          $TEST_FAILURES
+          \`\`\`
+          "
 
       - name: Re-run tests (must be green)
         run: uv run pytest -q
 
-      - name: Commit & push changes
+      - name: Commit & push fix
         run: |
           git config user.name "codex-autofix-bot"
           git config user.email "codex-autofix-bot@users.noreply.github.com"
           git add -A
-          git commit -m "autofix: make CI green" || exit 0
-          git push
+          git diff --staged --quiet || git commit -m "autofix: make CI green via Codex [skip ci]"
+          git push origin HEAD:${{ inputs.branch }}
